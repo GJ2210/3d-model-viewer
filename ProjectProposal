@@ -6,6 +6,8 @@ Spring 2026
 INTERACTIVE 3D MODEL VIEWER WITH REAL-TIME SHADING
 COMPARISON
 SUMMARY
+
+
 DESCRIPTION
 We want to build a 3D model viewer in C++ and OpenGL that covers the main parts of the
 graphics pipeline we have learned about so far. The idea is that you can load an OBJ file, see
@@ -16,6 +18,8 @@ shading so you can swap between them on the same model and actually see what cha
 We are also planning to handle visibility with a z-buffer, support wireframe rendering
 alongside solid fill, and give the user control over a light source so they can move it around
 and watch how the shading reacts.
+
+
 IMPORTANCE
 In class, we go through the math behind shading models and see some before/after images,
 but we never really get to play with it ourselves. We think there is a big difference between
@@ -26,6 +30,8 @@ pipeline and see the results immediately.
 It is also a useful thing to have built. Understanding how the pipeline works at this level is
 relevant if any of us end up working with game engines, 3D tools, or really anything that
 renders geometry.
+
+
 OUR PROPOSAL
 We will build this as a desktop app using OpenGL 3.3+ with GLFW for the window and
 input, and GLM for the matrix/vector math. Here is what we plan to support:
@@ -39,6 +45,8 @@ input, and GLM for the matrix/vector math. Here is what we plan to support:
 • Flat shading, Gouraud shading, and Phong shading (using Blinn-Phong reflectance)
 • A movable point light
 • Stretch goal: texture mapping with UVs from the OBJ file, if we have time
+
+
 RELATIONSHIP TO COMPUTER GRAPHICS
 Pretty much everything in this project ties back to what we have covered in lectures. The
 model transformations are the matrix stuff from the transformations lecture. Rasterization
