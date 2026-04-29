@@ -1,0 +1,64 @@
+TITLE: Interactive 3D Model Viewer with Real-Time Shading Comparison
+
+CS4361.001 Computer Graphics
+Final Project Proposal
+Spring 2026
+INTERACTIVE 3D MODEL VIEWER WITH REAL-TIME SHADING
+COMPARISON
+SUMMARY
+DESCRIPTION
+We want to build a 3D model viewer in C++ and OpenGL that covers the main parts of the
+graphics pipeline we have learned about so far. The idea is that you can load an OBJ file, see
+it rendered on screen, and then interact with it – rotate the model, move the camera
+around, switch between perspective and orthographic projection, and toggle between
+different shading modes. The core of the project is implementing flat, Gouraud, and Phong
+shading so you can swap between them on the same model and actually see what changes.
+We are also planning to handle visibility with a z-buffer, support wireframe rendering
+alongside solid fill, and give the user control over a light source so they can move it around
+and watch how the shading reacts.
+IMPORTANCE
+In class, we go through the math behind shading models and see some before/after images,
+but we never really get to play with it ourselves. We think there is a big difference between
+seeing a slide that says “Gouraud interpolates per-vertex colors” and actually dragging a
+light around a model and watching the Gouraud artifacts show up compared to Phong. That
+is basically what motivated this project – we wanted something where we could poke at the
+pipeline and see the results immediately.
+It is also a useful thing to have built. Understanding how the pipeline works at this level is
+relevant if any of us end up working with game engines, 3D tools, or really anything that
+renders geometry.
+OUR PROPOSAL
+We will build this as a desktop app using OpenGL 3.3+ with GLFW for the window and
+input, and GLM for the matrix/vector math. Here is what we plan to support:
+
+• Loading and displaying OBJ models
+• Model transformations (rotation, translation, scaling) with keyboard/mouse
+• An orbit camera with pan and zoom
+• Toggling between perspective and orthographic projection
+• Wireframe and solid fill rendering
+• Z-buffer depth testing
+• Flat shading, Gouraud shading, and Phong shading (using Blinn-Phong reflectance)
+• A movable point light
+• Stretch goal: texture mapping with UVs from the OBJ file, if we have time
+RELATIONSHIP TO COMPUTER GRAPHICS
+Pretty much everything in this project ties back to what we have covered in lectures. The
+model transformations are the matrix stuff from the transformations lecture. Rasterization
+and z-buffering are from Lecture 3. The shading modes and Blinn-Phong model come from
+Lecture 4. Camera and projection setup uses the viewing pipeline. So the project is basically
+taking all of those individual topics and putting them together into one working program.
+Goals
+Here is what we want to have working by the end of the semester:
+1. Load and display at least two different OBJ models on screen
+2. Let the user apply translate, rotate, and scale to models through keyboard/mouse
+input
+3. Implement an orbit camera with pan and zoom
+4. Support switching between orthographic and perspective projection
+5. Support wireframe and solid fill rendering modes
+6. Handle depth correctly using the OpenGL z-buffer
+7. Implement flat shading with per-face normals
+8. Implement Gouraud shading (per-vertex Blinn-Phong, colors interpolated across the
+triangle)
+9. Implement Phong shading (per-pixel Blinn-Phong computed in the fragment shader)
+10. Add a point light that the user can move around with the keyboard
+11. Show some kind of on-screen indicator for which shading mode is active, what
+projection is being used, and what the controls are
+12.(Stretch) Basic texture mapping, if we finish everything else
