@@ -133,26 +133,6 @@ static void load_model_with_dialog(GLFWwindow *window)
     if (!choose_obj_file(path, sizeof(path))) {
         return;
     }
-
-    if (!has_obj_extension(path)) {
-        fprintf(stderr, "Invalid file type: %s\nOnly .obj files can be loaded.\n", path);
-        return;
-    }
-
-    if (!is_in_model_folder(path)) {
-        fprintf(
-            stderr,
-            "Model rejected: %s\nChoose an .obj file from the %s/ folder.\n",
-            path,
-            MODEL_DIR);
-        return;
-    }
-
-    if (load_obj_model(path, &app.model)) {
-        update_window_title(window);
-    } else {
-        fprintf(stderr, "Failed to load selected model: %s\n", path);
-    }
 }
 
 /* Switches between perspective and orthographic projection. */
