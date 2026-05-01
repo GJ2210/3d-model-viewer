@@ -1,6 +1,7 @@
 #include "model.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,12 +9,14 @@
 
 #define INITIAL_CAPACITY 1024
 
+/* Subtracts one 3D vector from another. */
 static Vec3 vec3_sub(Vec3 a, Vec3 b)
 {
     Vec3 result = {a.x - b.x, a.y - b.y, a.z - b.z};
     return result;
 }
 
+/* Computes the cross product of two 3D vectors. */
 static Vec3 vec3_cross(Vec3 a, Vec3 b)
 {
     Vec3 result = {
@@ -24,6 +27,7 @@ static Vec3 vec3_cross(Vec3 a, Vec3 b)
     return result;
 }
 
+/* Normalizes a 3D vector, falling back to up when the vector is tiny. */
 static Vec3 vec3_normalize(Vec3 value)
 {
     float length = sqrtf(value.x * value.x + value.y * value.y + value.z * value.z);
@@ -36,18 +40,21 @@ static Vec3 vec3_normalize(Vec3 value)
     return result;
 }
 
+/* Initializes a Model to an empty, safe default state. */
 void model_init(Model *model)
 {
     memset(model, 0, sizeof(*model));
     model->scale = 1.0f;
 }
 
+/* Frees model vertex memory and resets the model. */
 void model_free(Model *model)
 {
     free(model->vertices);
     model_init(model);
 }
 
+/* Ensures the model has room for at least the requested vertex count. */
 static int model_reserve(Model *model, size_t required_capacity)
 {
     if (required_capacity <= model->capacity) {
@@ -61,6 +68,7 @@ static int model_reserve(Model *model, size_t required_capacity)
 
     Vertex *next_vertices = realloc(model->vertices, next_capacity * sizeof(*next_vertices));
     if (!next_vertices) {
+        fprintf(stderr, "Out of memory while growing model vertex buffer.\n");
         return 0;
     }
 
@@ -69,6 +77,7 @@ static int model_reserve(Model *model, size_t required_capacity)
     return 1;
 }
 
+/* Adds one triangle and its computed face normal to the model. */
 static int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
 {
     if (!model_reserve(model, model->count + 3)) {
@@ -82,6 +91,7 @@ static int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
     return 1;
 }
 
+/* Computes the model center and scale from its vertex bounds. */
 static void model_update_bounds(Model *model)
 {
     if (model->count == 0) {
@@ -113,6 +123,7 @@ static void model_update_bounds(Model *model)
     model->scale = largest_span > 0.00001f ? 2.0f / largest_span : 1.0f;
 }
 
+/* Converts an OBJ face index token into a zero-based position index. */
 static int parse_obj_index(const char *token, int position_count)
 {
     char *end = NULL;
@@ -132,12 +143,14 @@ static int parse_obj_index(const char *token, int position_count)
     return (int)raw_index - 1;
 }
 
+/* Appends a parsed OBJ vertex position to the temporary position list. */
 static int append_position(Vec3 **positions, size_t *count, size_t *capacity, Vec3 position)
 {
     if (*count >= *capacity) {
         size_t next_capacity = *capacity == 0 ? INITIAL_CAPACITY : *capacity * 2;
         Vec3 *next_positions = realloc(*positions, next_capacity * sizeof(**positions));
         if (!next_positions) {
+            fprintf(stderr, "Out of memory while reading OBJ vertex positions.\n");
             return 0;
         }
 
@@ -149,11 +162,12 @@ static int append_position(Vec3 **positions, size_t *count, size_t *capacity, Ve
     return 1;
 }
 
+/* Loads vertices and faces from a Wavefront OBJ file into a Model. */
 int load_obj_model(const char *path, Model *out_model)
 {
     FILE *file = fopen(path, "r");
     if (!file) {
-        fprintf(stderr, "Could not open model: %s\n", path);
+        fprintf(stderr, "Could not open model %s: %s\n", path, strerror(errno));
         return 0;
     }
 
@@ -165,8 +179,10 @@ int load_obj_model(const char *path, Model *out_model)
     size_t position_capacity = 0;
     char line[4096];
     int success = 1;
+    size_t line_number = 0;
 
     while (fgets(line, sizeof(line), file)) {
+        line_number++;
         char *cursor = line;
         while (isspace((unsigned char)*cursor)) {
             cursor++;
@@ -176,6 +192,7 @@ int load_obj_model(const char *path, Model *out_model)
             Vec3 position;
             if (sscanf(cursor + 1, "%f %f %f", &position.x, &position.y, &position.z) == 3) {
                 if (!append_position(&positions, &position_count, &position_capacity, position)) {
+                    fprintf(stderr, "Failed while reading vertex on line %zu in %s\n", line_number, path);
                     success = 0;
                     break;
                 }
@@ -198,6 +215,7 @@ int load_obj_model(const char *path, Model *out_model)
                 Vec3 b = positions[face_indices[i]];
                 Vec3 c = positions[face_indices[i + 1]];
                 if (!model_add_triangle(&loaded, a, b, c)) {
+                    fprintf(stderr, "Failed while building face on line %zu in %s\n", line_number, path);
                     success = 0;
                     break;
                 }
@@ -205,12 +223,22 @@ int load_obj_model(const char *path, Model *out_model)
         }
     }
 
+    if (ferror(file)) {
+        fprintf(stderr, "Error while reading model %s: %s\n", path, strerror(errno));
+        success = 0;
+    }
+
     fclose(file);
     free(positions);
 
     if (!success || loaded.count == 0) {
+        int had_triangles = loaded.count > 0;
         model_free(&loaded);
-        fprintf(stderr, "Could not load triangles from OBJ: %s\n", path);
+        if (!had_triangles) {
+            fprintf(stderr, "OBJ file has no loadable triangle faces: %s\n", path);
+        } else {
+            fprintf(stderr, "Could not load triangles from OBJ: %s\n", path);
+        }
         return 0;
     }
 

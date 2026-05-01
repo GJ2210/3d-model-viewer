@@ -4,11 +4,13 @@
 
 #include <GLFW/glfw3.h>
 
+/* Returns a readable name for the active projection mode. */
 const char *projection_mode_name(ProjectionMode mode)
 {
     return mode == PROJECTION_ORTHOGRAPHIC ? "orthographic" : "perspective";
 }
 
+/* Draws a simple ground grid for spatial reference. */
 static void draw_grid(void)
 {
     glDisable(GL_LIGHTING);
@@ -24,6 +26,7 @@ static void draw_grid(void)
     glEnable(GL_LIGHTING);
 }
 
+/* Draws the loaded model with its stored vertices and normals. */
 static void draw_model(const Model *model)
 {
     glPushMatrix();
@@ -42,6 +45,7 @@ static void draw_model(const Model *model)
     glPopMatrix();
 }
 
+/* Configures the OpenGL projection matrix for perspective or orthographic mode. */
 static void apply_projection(int width, int height, float distance, ProjectionMode projection_mode)
 {
     float aspect = height > 0 ? (float)width / (float)height : 1.0f;
@@ -70,6 +74,7 @@ static void apply_projection(int width, int height, float distance, ProjectionMo
     }
 }
 
+/* Clears the frame and renders the grid and model from the current camera state. */
 void render_scene(
     const Model *model,
     int width,

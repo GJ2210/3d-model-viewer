@@ -23,7 +23,7 @@ Run these commands from the main project folder, the same folder that contains `
 make run
 ```
 
-On startup, the app loads the first `.obj` file it finds in `models/`. If that folder is empty, add an `.obj` file there and use `L` or `O` inside the app to choose it.
+On startup, the app loads the first `.obj` file it finds in `models/`. If that folder is empty, add an `.obj` file there and use `L` inside the app to choose it.
 
 To open a specific OBJ file at launch:
 
@@ -39,7 +39,7 @@ make run-file MODEL=pyramid.obj
 
 ## Controls
 
-- `L` or `O`: load an `.obj` file from the `models/` folder
+- `L`: load an `.obj` file from the `models/` folder
 - Left drag: orbit camera
 - Scroll: zoom
 - `P`: toggle perspective/orthographic projection
