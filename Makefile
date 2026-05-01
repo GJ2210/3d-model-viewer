@@ -19,7 +19,7 @@ run: all
 	./$(TARGET)
 
 run-file: all
-	@test -n "$(MODEL)" || (echo "Usage: make run-file MODEL=/path/to/model.obj" && exit 1)
+	@test -n "$(MODEL)" || (echo "Usage: make run-file MODEL=models/pyramid.obj" && exit 1)
 	./$(TARGET) "$(MODEL)"
 
 clean:

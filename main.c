@@ -4,9 +4,13 @@
 #include "renderer.h"
 
 #include <GLFW/glfw3.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+
+#define MODEL_DIR "models"
 
 typedef struct {
     Model model;
@@ -22,11 +26,60 @@ typedef struct {
 
 static AppState app = {0};
 
+static int has_obj_extension(const char *path)
+{
+    const char *extension = strrchr(path, '.');
+    return extension && strcasecmp(extension, ".obj") == 0;
+}
+
+static const char *path_basename(const char *path)
+{
+    const char *slash = strrchr(path, '/');
+    return slash ? slash + 1 : path;
+}
+
+static int is_model_folder_path(const char *path)
+{
+    const char *model_dir_fragment = "/" MODEL_DIR "/";
+    return strncmp(path, MODEL_DIR "/", strlen(MODEL_DIR) + 1) == 0 ||
+        strstr(path, model_dir_fragment) != NULL;
+}
+
+static int find_first_model_file(char *path, size_t path_size)
+{
+    DIR *directory = opendir(MODEL_DIR);
+    if (!directory) {
+        return 0;
+    }
+
+    struct dirent *entry = NULL;
+    int found = 0;
+    while ((entry = readdir(directory)) != NULL) {
+        if (entry->d_name[0] == '.' || !has_obj_extension(entry->d_name)) {
+            continue;
+        }
+
+        snprintf(path, path_size, "%s/%s", MODEL_DIR, entry->d_name);
+        found = 1;
+        break;
+    }
+
+    closedir(directory);
+    return found;
+}
+
+static void resolve_model_folder_path(const char *input, char *path, size_t path_size)
+{
+    snprintf(path, path_size, "%s/%s", MODEL_DIR, path_basename(input));
+}
+
 static int choose_obj_file(char *path, size_t path_size)
 {
     const char *command =
-        "osascript -e 'POSIX path of (choose file of type {\"obj\"} "
-        "with prompt \"Choose an OBJ model to load\")' 2>/dev/null";
+        "osascript "
+        "-e 'set modelFolder to POSIX file ((do shell script \"pwd\") & \"/models/\")' "
+        "-e 'POSIX path of (choose file of type {\"obj\"} default location modelFolder "
+        "with prompt \"Choose an OBJ model from the models folder\")' 2>/dev/null";
 
     FILE *pipe = popen(command, "r");
     if (!pipe) {
@@ -69,7 +122,22 @@ static void reset_camera(void)
 static void load_model_with_dialog(GLFWwindow *window)
 {
     char path[PATH_BUFFER_SIZE];
-    if (choose_obj_file(path, sizeof(path)) && load_obj_model(path, &app.model)) {
+
+    if (!choose_obj_file(path, sizeof(path))) {
+        return;
+    }
+
+    if (!has_obj_extension(path)) {
+        fprintf(stderr, "Only .obj files can be loaded: %s\n", path);
+        return;
+    }
+
+    if (!is_model_folder_path(path)) {
+        fprintf(stderr, "Choose an .obj file from the %s/ folder: %s\n", MODEL_DIR, path);
+        return;
+    }
+
+    if (load_obj_model(path, &app.model)) {
         reset_camera();
         update_window_title(window);
     }
@@ -95,7 +163,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
     if (key == GLFW_KEY_ESCAPE) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    } else if (key == GLFW_KEY_L || key == GLFW_KEY_O) {
+    } else if (key == GLFW_KEY_L) {
         load_model_with_dialog(window);
     } else if (key == GLFW_KEY_P) {
         toggle_projection(window);
@@ -155,8 +223,9 @@ static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
 static void print_help(void)
 {
     puts("3D Model Viewer");
+    puts("Run this app from the main project folder that contains Makefile, main.c, and models/.");
     puts("Controls:");
-    puts("  L or O  Load an OBJ model");
+    puts("  L       Load an OBJ model from models/");
     puts("  Drag    Orbit camera");
     puts("  Scroll  Zoom");
     puts("  P       Toggle perspective/orthographic projection");
@@ -169,7 +238,6 @@ int main(int argc, char **argv)
 {
     print_help();
     model_init(&app.model);
-    create_demo_model(&app.model);
     app.projection_mode = PROJECTION_PERSPECTIVE;
     reset_camera();
 
@@ -202,7 +270,22 @@ int main(int argc, char **argv)
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
     if (argc > 1) {
-        load_obj_model(argv[1], &app.model);
+        char model_path[PATH_BUFFER_SIZE];
+        resolve_model_folder_path(argv[1], model_path, sizeof(model_path));
+
+        if (!has_obj_extension(model_path)) {
+            fprintf(stderr, "Only .obj files can be loaded: %s\n", model_path);
+        } else {
+            load_obj_model(model_path, &app.model);
+        }
+    } else {
+        char model_path[PATH_BUFFER_SIZE];
+        if (find_first_model_file(model_path, sizeof(model_path))) {
+            load_obj_model(model_path, &app.model);
+        } else {
+            puts("No .obj files found in models/.");
+            puts("Make sure you ran make run from the main project folder, then add an .obj file to models/.");
+        }
     }
     update_window_title(window);
 

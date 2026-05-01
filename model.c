@@ -69,7 +69,7 @@ static int model_reserve(Model *model, size_t required_capacity)
     return 1;
 }
 
-int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
+static int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
 {
     if (!model_reserve(model, model->count + 3)) {
         return 0;
@@ -82,7 +82,7 @@ int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
     return 1;
 }
 
-void model_update_bounds(Model *model)
+static void model_update_bounds(Model *model)
 {
     if (model->count == 0) {
         model->center = (Vec3){0.0f, 0.0f, 0.0f};
@@ -221,36 +221,4 @@ int load_obj_model(const char *path, Model *out_model)
 
     printf("Loaded %zu triangles from %s\n", out_model->count / 3, out_model->source_path);
     return 1;
-}
-
-void create_demo_model(Model *model)
-{
-    model_free(model);
-
-    const Vec3 p[8] = {
-        {-0.7f, -0.7f, -0.7f},
-        { 0.7f, -0.7f, -0.7f},
-        { 0.7f,  0.7f, -0.7f},
-        {-0.7f,  0.7f, -0.7f},
-        {-0.7f, -0.7f,  0.7f},
-        { 0.7f, -0.7f,  0.7f},
-        { 0.7f,  0.7f,  0.7f},
-        {-0.7f,  0.7f,  0.7f},
-    };
-
-    const int faces[12][3] = {
-        {0, 1, 2}, {0, 2, 3},
-        {4, 6, 5}, {4, 7, 6},
-        {0, 4, 5}, {0, 5, 1},
-        {3, 2, 6}, {3, 6, 7},
-        {1, 5, 6}, {1, 6, 2},
-        {0, 3, 7}, {0, 7, 4},
-    };
-
-    for (size_t i = 0; i < sizeof(faces) / sizeof(faces[0]); ++i) {
-        model_add_triangle(model, p[faces[i][0]], p[faces[i][1]], p[faces[i][2]]);
-    }
-
-    model_update_bounds(model);
-    snprintf(model->source_path, sizeof(model->source_path), "demo cube");
 }
