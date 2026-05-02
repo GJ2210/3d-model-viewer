@@ -1,5 +1,3 @@
-#define GL_SILENCE_DEPRECATION
-
 #include "renderer.h"
 
 #include <GLFW/glfw3.h>
