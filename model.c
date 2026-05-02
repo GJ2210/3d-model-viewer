@@ -40,6 +40,22 @@ static Vec3 vec3_normalize(Vec3 value)
     return result;
 }
 
+/* Adds two 3D vectors together. */
+static Vec3 vec3_add(Vec3 a, Vec3 b)
+{
+    Vec3 result = {a.x + b.x, a.y + b.y, a.z + b.z};
+    return result;
+}
+
+/* Returns true when two positions are close enough to share a smooth normal. */
+static int vec3_same_position(Vec3 a, Vec3 b)
+{
+    const float epsilon = 0.0001f;
+    return fabsf(a.x - b.x) < epsilon &&
+        fabsf(a.y - b.y) < epsilon &&
+        fabsf(a.z - b.z) < epsilon;
+}
+
 /* Initializes a Model to an empty, safe default state. */
 void model_init(Model *model)
 {
@@ -85,10 +101,26 @@ static int model_add_triangle(Model *model, Vec3 a, Vec3 b, Vec3 c)
     }
 
     Vec3 normal = vec3_normalize(vec3_cross(vec3_sub(b, a), vec3_sub(c, a)));
-    model->vertices[model->count++] = (Vertex){a, normal};
-    model->vertices[model->count++] = (Vertex){b, normal};
-    model->vertices[model->count++] = (Vertex){c, normal};
+    model->vertices[model->count++] = (Vertex){a, normal, normal};
+    model->vertices[model->count++] = (Vertex){b, normal, normal};
+    model->vertices[model->count++] = (Vertex){c, normal, normal};
     return 1;
+}
+
+/* Averages normals for shared positions to support smooth shading modes. */
+static void model_update_smooth_normals(Model *model)
+{
+    for (size_t i = 0; i < model->count; ++i) {
+        Vec3 normal_sum = {0.0f, 0.0f, 0.0f};
+
+        for (size_t j = 0; j < model->count; ++j) {
+            if (vec3_same_position(model->vertices[i].position, model->vertices[j].position)) {
+                normal_sum = vec3_add(normal_sum, model->vertices[j].flat_normal);
+            }
+        }
+
+        model->vertices[i].smooth_normal = vec3_normalize(normal_sum);
+    }
 }
 
 /* Computes the model center and scale from its vertex bounds. */
@@ -243,6 +275,7 @@ int load_obj_model(const char *path, Model *out_model)
     }
 
     model_update_bounds(&loaded);
+    model_update_smooth_normals(&loaded);
     snprintf(loaded.source_path, sizeof(loaded.source_path), "%s", path);
     model_free(out_model);
     *out_model = loaded;

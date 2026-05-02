@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include "model.h"
+#include "shading.h"
 
 typedef enum {
     PROJECTION_PERSPECTIVE,
@@ -17,6 +18,7 @@ void render_scene(
     float pitch,
     float distance,
     int show_wireframe,
-    ProjectionMode projection_mode);
+    ProjectionMode projection_mode,
+    ShadingMode shading_mode);
 
 #endif

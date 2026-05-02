@@ -13,7 +13,8 @@ typedef struct {
 
 typedef struct {
     Vec3 position;
-    Vec3 normal;
+    Vec3 flat_normal;
+    Vec3 smooth_normal;
 } Vertex;
 
 typedef struct {

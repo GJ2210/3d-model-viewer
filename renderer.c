@@ -26,7 +26,7 @@ static void draw_grid(void)
 }
 
 /* Draws the loaded model with its stored vertices and normals. */
-static void draw_model(const Model *model)
+static void draw_model(const Model *model, ShadingMode shading_mode)
 {
     glPushMatrix();
     glScalef(model->scale, model->scale, model->scale);
@@ -36,7 +36,8 @@ static void draw_model(const Model *model)
     glBegin(GL_TRIANGLES);
     for (size_t i = 0; i < model->count; ++i) {
         Vertex vertex = model->vertices[i];
-        glNormal3f(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+        Vec3 normal = shading_vertex_normal(&vertex, shading_mode);
+        glNormal3f(normal.x, normal.y, normal.z);
         glVertex3f(vertex.position.x, vertex.position.y, vertex.position.z);
     }
     glEnd();
@@ -82,7 +83,8 @@ void render_scene(
     float pitch,
     float distance,
     int show_wireframe,
-    ProjectionMode projection_mode)
+    ProjectionMode projection_mode,
+    ShadingMode shading_mode)
 {
     glViewport(0, 0, width, height);
     glClearColor(0.08f, 0.09f, 0.11f, 1.0f);
@@ -102,10 +104,11 @@ void render_scene(
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_color);
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambient);
+    apply_shading_mode(shading_mode);
 
     draw_grid();
 
     glPolygonMode(GL_FRONT_AND_BACK, show_wireframe ? GL_LINE : GL_FILL);
-    draw_model(model);
+    draw_model(model, shading_mode);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

@@ -7,10 +7,12 @@
 
 #include "model.h"
 #include "renderer.h"
+#include "shading.h"
 
 typedef struct {
     Model model;
     ProjectionMode projection_mode;
+    ShadingMode shading_mode;
     float yaw;
     float pitch;
     float distance;
@@ -56,12 +58,6 @@ static int choose_obj_file(char *path, size_t path_size)
         return 0;
     }
 
-    const char *extension = strrchr(path, '.');
-    if (!extension || strcasecmp(extension, ".obj") != 0) {
-        fprintf(stderr, "Invalid file type: %s\nOnly .obj files can be loaded.\n", path);
-        return 0;
-    }
-
     return 1;
 }
 
@@ -92,6 +88,15 @@ static void toggle_projection(GLFWwindow *window)
     printf("Projection: %s\n", projection_mode_name(app.projection_mode));
 }
 
+/* Cycles through flat, Gouraud, and Phong-style shading modes. */
+static void toggle_shading(GLFWwindow *window)
+{
+    (void)window;
+
+    app.shading_mode = next_shading_mode(app.shading_mode);
+    printf("Shading: %s\n", shading_mode_name(app.shading_mode));
+}
+
 /* Handles keyboard shortcuts for loading, projection, wireframe, and quit. */
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -108,6 +113,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         load_model(window);
     } else if (key == GLFW_KEY_P) {
         toggle_projection(window);
+    } else if (key == GLFW_KEY_S) {
+        toggle_shading(window);
     } else if (key == GLFW_KEY_W) {
         app.show_wireframe = !app.show_wireframe;
     }
@@ -180,11 +187,13 @@ int main(int argc, char **argv)
     printf("  Drag    Orbit camera\n");
     printf("  Scroll  Zoom\n");
     printf("  P       Toggle perspective/orthographic projection\n");
+    printf("  S       Toggle flat/Gouraud/Phong shading\n");
     printf("  W       Toggle wireframe\n");
     printf("  Q       Quit\n");
 
     model_init(&app.model);
     app.projection_mode = PROJECTION_PERSPECTIVE;
+    app.shading_mode = SHADING_FLAT;
     app.yaw = -35.0f;
     app.pitch = 20.0f;
     app.distance = 5.0f;
@@ -228,12 +237,12 @@ int main(int argc, char **argv)
         } else if (!load_obj_model(model_path, &app.model)) {
             fprintf(stderr, "Failed to load requested model: %s\n", model_path);
         }
-    } else {
-        fprintf(
-            stderr,
-            "No model file was provided.\n"
-            "press L to choose an OBJ file\n");
-    }
+        } else {
+            fprintf(
+                stderr,
+                "No model file was provided.\n"
+                "press L to choose an OBJ file\n");
+        }
 
     while (!glfwWindowShouldClose(window)) {
         int width = 0;
@@ -248,7 +257,8 @@ int main(int argc, char **argv)
             app.pitch,
             app.distance,
             app.show_wireframe,
-            app.projection_mode);
+            app.projection_mode,
+            app.shading_mode);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

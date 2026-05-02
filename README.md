@@ -43,6 +43,7 @@ make run-file MODEL=pyramid.obj
 - Left drag: orbit camera
 - Scroll: zoom
 - `P`: toggle perspective/orthographic projection
+- `S`: toggle flat, Gouraud, and Phong-style shading
 - `W`: toggle wireframe
 - `Esc`: quit
 
