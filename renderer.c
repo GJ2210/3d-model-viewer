@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 
+
 /* Returns a readable name for the active projection mode. */
 const char *projection_mode_name(ProjectionMode mode)
 {

@@ -5,6 +5,9 @@
 #include <string.h>
 #include <strings.h>
 
+#include "model.h"
+#include "renderer.h"
+
 typedef struct {
     Model model;
     ProjectionMode projection_mode;
@@ -13,17 +16,11 @@ typedef struct {
     float distance;
     int is_dragging;
     int show_wireframe;
-    double last_mouse_x;
-    double last_mouse_y;
+    double mouse_x;
+    double mouse_y;
 } AppState;
 
 static AppState app = {0};
-
-/* Prints GLFW errors with their numeric code and description. */
-static void glfw_error_callback(int error, const char *description)
-{
-    fprintf(stderr, "GLFW error %d: %s\n", error, description);
-}
 
 /* Opens the macOS file picker and stores a validated OBJ path. */
 static int choose_obj_file(char *path, size_t path_size)
@@ -123,7 +120,7 @@ static void mouse_button_callback(GLFWwindow *window, int button, int action, in
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         app.is_dragging = action == GLFW_PRESS;
-        glfwGetCursorPos(window, &app.last_mouse_x, &app.last_mouse_y);
+        glfwGetCursorPos(window, &app.mouse_x, &app.mouse_y);
     }
 }
 
@@ -136,8 +133,8 @@ static void cursor_position_callback(GLFWwindow *window, double x, double y)
         return;
     }
 
-    double dx = x - app.last_mouse_x;
-    double dy = y - app.last_mouse_y;
+    double dx = x - app.mouse_x;
+    double dy = y - app.mouse_y;
     app.yaw += (float)dx * 0.35f;
     app.pitch += (float)dy * 0.35f;
 
@@ -147,8 +144,8 @@ static void cursor_position_callback(GLFWwindow *window, double x, double y)
         app.pitch = -89.0f;
     }
 
-    app.last_mouse_x = x;
-    app.last_mouse_y = y;
+    app.mouse_x = x;
+    app.mouse_y = y;
 }
 
 /* Zooms the camera in or out using the mouse wheel. */
@@ -165,20 +162,26 @@ static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
     }
 }
 
+/* Prints GLFW errors with their numeric code and description. */
+static void error_callback(int error, const char *description)
+{
+    fprintf(stderr, "GLFW error %d: %s\n", error, description);
+}
+
 /* Initializes the app, loads a model, and runs the render loop. */
 int main(int argc, char **argv)
 {
-    glfwSetErrorCallback(glfw_error_callback);
+    glfwSetErrorCallback(error_callback);
 
     puts("3D Model Viewer");
     printf("Run this app from the main project folder\n");
-    puts("Controls:");
-    printf("  L     Load an OBJ model");
-    puts("  Drag    Orbit camera");
-    puts("  Scroll  Zoom");
-    puts("  P       Toggle perspective/orthographic projection");
-    puts("  W       Toggle wireframe");
-    puts("  Q       Quit");
+    printf("Controls:");
+    printf("  L      Load an OBJ model\n");
+    printf("  Drag    Orbit camera\n");
+    printf("  Scroll  Zoom\n");
+    printf("  P       Toggle perspective/orthographic projection\n");
+    printf("  W       Toggle wireframe\n");
+    printf("  Q       Quit\n");
 
     model_init(&app.model);
     app.projection_mode = PROJECTION_PERSPECTIVE;
@@ -187,7 +190,6 @@ int main(int argc, char **argv)
     app.distance = 5.0f;
 
     if (!glfwInit()) {
-        fprintf(stderr, "Failed to initialize GLFW. Check that GLFW is installed and linked correctly.\n");
         return EXIT_FAILURE;
     }
 
