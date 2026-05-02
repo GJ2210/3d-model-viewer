@@ -6,10 +6,8 @@
 #include <stdexcept>
 #include <glm/gtc/type_ptr.hpp>
 
-// ── Constructor ───────────────────────────────────────────────────────────────
-
 Shader::Shader(const char* vertexPath, const char* fragmentPath) {
-    GLuint vert = compile(GL_VERTEX_SHADER,   loadSource(vertexPath));
+    GLuint vert = compile(GL_VERTEX_SHADER, loadSource(vertexPath));
     GLuint frag = compile(GL_FRAGMENT_SHADER, loadSource(fragmentPath));
 
     id_ = glCreateProgram();
@@ -35,8 +33,6 @@ Shader::~Shader() {
     glDeleteProgram(id_);
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 void Shader::use() const { glUseProgram(id_); }
 
 void Shader::setInt(const std::string& name, int value) const {
@@ -54,8 +50,6 @@ void Shader::setMat3(const std::string& name, const glm::mat3& m) const {
 void Shader::setMat4(const std::string& name, const glm::mat4& m) const {
     glUniformMatrix4fv(glGetUniformLocation(id_, name.c_str()), 1, GL_FALSE, glm::value_ptr(m));
 }
-
-// ── Private helpers ───────────────────────────────────────────────────────────
 
 std::string Shader::loadSource(const std::string& path) {
     std::ifstream file(path);

@@ -1,44 +1,38 @@
 #include "Mesh.h"
-#include <cstddef>   // offsetof
-
-// ── Constructor / Destructor ──────────────────────────────────────────────────
+#include <cstddef>
 
 Mesh::Mesh() {
     glGenVertexArrays(1, &flatVAO_);
-    glGenBuffers     (1, &flatVBO_);
+    glGenBuffers(1, &flatVBO_);
     glGenVertexArrays(1, &smthVAO_);
-    glGenBuffers     (1, &smthVBO_);
-    glGenBuffers     (1, &smthEBO_);
+    glGenBuffers(1, &smthVBO_);
+    glGenBuffers(1, &smthEBO_);
 }
 
 Mesh::~Mesh() {
     glDeleteVertexArrays(1, &flatVAO_);
-    glDeleteBuffers     (1, &flatVBO_);
+    glDeleteBuffers(1, &flatVBO_);
     glDeleteVertexArrays(1, &smthVAO_);
-    glDeleteBuffers     (1, &smthVBO_);
-    glDeleteBuffers     (1, &smthEBO_);
+    glDeleteBuffers(1, &smthVBO_);
+    glDeleteBuffers(1, &smthEBO_);
 }
-
-// ── Upload ────────────────────────────────────────────────────────────────────
 
 void Mesh::uploadFlat(const std::vector<Vertex>& vertices) {
     flatVertexCount_ = static_cast<int>(vertices.size());
 
     glBindVertexArray(flatVAO_);
     glBindBuffer(GL_ARRAY_BUFFER, flatVBO_);
-    glBufferData(GL_ARRAY_BUFFER,
-                 flatVertexCount_ * sizeof(Vertex),
-                 vertices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, flatVertexCount_ * sizeof(Vertex),
+                 vertices.data(), GL_STATIC_DRAW);
 
-    // location 0: position
+    // position attrib
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
-    // location 1: normal
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
+    // normal attrib
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
 
     glBindVertexArray(0);
 }
@@ -50,30 +44,22 @@ void Mesh::uploadSmooth(const std::vector<Vertex>& vertices,
     glBindVertexArray(smthVAO_);
 
     glBindBuffer(GL_ARRAY_BUFFER, smthVBO_);
-    glBufferData(GL_ARRAY_BUFFER,
-                 vertices.size() * sizeof(Vertex),
-                 vertices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
+                 vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, smthEBO_);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 smthIndexCount_ * sizeof(unsigned int),
-                 indices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, smthIndexCount_ * sizeof(unsigned int),
+                 indices.data(), GL_STATIC_DRAW);
 
-    // location 0: position
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
-    // location 1: normal
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, normal)));
 
     glBindVertexArray(0);
 }
-
-// ── Draw calls ────────────────────────────────────────────────────────────────
 
 void Mesh::drawFlat() const {
     glBindVertexArray(flatVAO_);
