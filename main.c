@@ -10,10 +10,6 @@
 #include <string.h>
 #include <strings.h>
 
-#define MODEL_DIR "models"
-#define MODEL_DIR_PREFIX MODEL_DIR "/"
-#define MODEL_DIR_FRAGMENT "/" MODEL_DIR "/"
-
 typedef struct {
     Model model;
     ProjectionMode projection_mode;
@@ -39,7 +35,7 @@ static int choose_obj_file(char *path, size_t path_size)
 {
     const char *command =
         "osascript "
-        "-e 'set modelFolder to POSIX file ((do shell script \"pwd\") & \"/" MODEL_DIR "/\")' "
+        "-e 'set modelFolder to POSIX file ((do shell script \"pwd\") & \"/" "models" "/\")' "
         "-e 'POSIX path of (choose file of type {\"obj\"} default location modelFolder "
         "with prompt \"Choose an OBJ model from the models folder\")' 2>/dev/null";
 
@@ -188,7 +184,7 @@ int main(int argc, char **argv)
     puts("  P       Toggle perspective/orthographic projection");
     puts("  W       Toggle wireframe");
     puts("  Q       Quit");
-    
+
     model_init(&app.model);
     app.projection_mode = PROJECTION_PERSPECTIVE;
     app.yaw = -35.0f;
@@ -227,7 +223,7 @@ int main(int argc, char **argv)
         char model_path[PATH_BUFFER_SIZE];
         const char *slash = strrchr(argv[1], '/');
         const char *filename = slash ? slash + 1 : argv[1];
-        snprintf(model_path, sizeof(model_path), "%s%s", MODEL_DIR_PREFIX, filename);
+        snprintf(model_path, sizeof(model_path), "%s%s", "models/", filename);
 
         const char *extension = strrchr(model_path, '.');
         if (!extension || strcasecmp(extension, ".obj") != 0) {
