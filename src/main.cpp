@@ -133,8 +133,30 @@ static void uploadLightUniforms(Shader& shader, const AppState& app,
     shader.setVec3("viewPos",      app.camera.getPosition());
 }
 
+static void printInstructions(const std::string& objPath) {
+    std::cout
+        << "Model Viewer\n"
+        << "============\n"
+        << "Loaded model: " << objPath << "\n\n"
+        << "Mouse:\n"
+        << "  Left click + drag       Orbit camera around model\n"
+        << "  Right click + drag      Pan camera\n"
+        << "  Scroll wheel            Zoom in / out\n\n"
+        << "Keyboard:\n"
+        << "  1                       Flat shading\n"
+        << "  2                       Gouraud shading\n"
+        << "  3                       Phong shading\n"
+        << "  W                       Toggle wireframe overlay\n"
+        << "  P                       Switch projection mode\n"
+        << "  R                       Reset camera\n"
+        << "  Arrow keys              Move light left / right / forward / back\n"
+        << "  = / -                   Move light up / down\n"
+        << "  ESC                     Quit\n\n";
+}
+
 int main(int argc, char* argv[]) {
     std::string objPath = (argc >= 2) ? argv[1] : "models/cube.obj";
+    printInstructions(objPath);
 
     if (!glfwInit()) {
         std::cerr << "Failed to initialise GLFW\n";

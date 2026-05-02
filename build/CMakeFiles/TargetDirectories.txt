@@ -1,3 +1,0 @@
-/Users/mazinomar/Documents/Spring 2026/Computer Graphics/FinalProj/build/CMakeFiles/ModelViewer.dir
-/Users/mazinomar/Documents/Spring 2026/Computer Graphics/FinalProj/build/CMakeFiles/edit_cache.dir
-/Users/mazinomar/Documents/Spring 2026/Computer Graphics/FinalProj/build/CMakeFiles/rebuild_cache.dir
