@@ -4,7 +4,6 @@
 #include "renderer.h"
 
 #include <GLFW/glfw3.h>
-#include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +13,6 @@
 #define MODEL_DIR "models"
 #define MODEL_DIR_PREFIX MODEL_DIR "/"
 #define MODEL_DIR_FRAGMENT "/" MODEL_DIR "/"
-#define APP_TITLE "3D Model Viewer"
 
 typedef struct {
     Model model;
@@ -36,45 +34,7 @@ static void glfw_error_callback(int error, const char *description)
     fprintf(stderr, "GLFW error %d: %s\n", error, description);
 }
 
-/* Returns true when the path points to a Wavefront OBJ file. */
-static int has_obj_extension(const char *path)
-{
-    const char *extension = strrchr(path, '.');
-    return extension && strcasecmp(extension, ".obj") == 0;
-}
-
-/* Finds the first OBJ file in the models directory. */
-static int find_first_model_file(char *path, size_t path_size)
-{
-    DIR *directory = opendir(MODEL_DIR);
-    if (!directory) {
-        fprintf(
-            stderr,
-            "Could not open %s/ folder: %s\n"
-            "Run the app from the main project folder and make sure %s/ exists.\n",
-            MODEL_DIR,
-            strerror(errno),
-            MODEL_DIR);
-        return 0;
-    }
-
-    struct dirent *entry = NULL;
-    int found = 0;
-    while ((entry = readdir(directory)) != NULL) {
-        if (entry->d_name[0] == '.' || !has_obj_extension(entry->d_name)) {
-            continue;
-        }
-
-        snprintf(path, path_size, "%s/%s", MODEL_DIR, entry->d_name);
-        found = 1;
-        break;
-    }
-
-    closedir(directory);
-    return found;
-}
-
-/* Opens the macOS file picker and stores the selected OBJ path. */
+/* Opens the macOS file picker and stores a validated OBJ path. */
 static int choose_obj_file(char *path, size_t path_size)
 {
     const char *command =
@@ -102,47 +62,46 @@ static int choose_obj_file(char *path, size_t path_size)
     }
 
     path[strcspn(path, "\r\n")] = '\0';
-    return path[0] != '\0';
-}
 
-/* Returns true when a path already points inside models/. */
-static int is_in_model_folder(const char *path)
-{
-    return strncmp(path, MODEL_DIR_PREFIX, strlen(MODEL_DIR_PREFIX)) == 0 ||
-        strstr(path, MODEL_DIR_FRAGMENT) != NULL;
-}
+    if (path[0] == '\0') {
+        fprintf(stderr, "File picker returned an empty path.\n");
+        return 0;
+    }
 
-/* Updates the window title with projection mode and loaded model name. */
-static void update_window_title(GLFWwindow *window)
-{
-    char title[PATH_BUFFER_SIZE + 160];
-    snprintf(
-        title,
-        sizeof(title),
-        APP_TITLE " - %s - %s",
-        projection_mode_name(app.projection_mode),
-        app.model.source_path[0] ? app.model.source_path : "No model");
-    glfwSetWindowTitle(window, title);
+    const char *extension = strrchr(path, '.');
+    if (!extension || strcasecmp(extension, ".obj") != 0) {
+        fprintf(stderr, "Invalid file type: %s\nOnly .obj files can be loaded.\n", path);
+        return 0;
+    }
+
+    return 1;
 }
 
 /* Loads a model selected through the file picker. */
-static void load_model_with_dialog(GLFWwindow *window)
+static void load_model(GLFWwindow *window)
 {
+    (void)window;
+
     char path[PATH_BUFFER_SIZE];
 
     if (!choose_obj_file(path, sizeof(path))) {
         return;
+    }
+
+    if (!load_obj_model(path, &app.model)) {
+        fprintf(stderr, "Failed to load selected model: %s\n", path);
     }
 }
 
 /* Switches between perspective and orthographic projection. */
 static void toggle_projection(GLFWwindow *window)
 {
+    (void)window;
+
     app.projection_mode = app.projection_mode == PROJECTION_PERSPECTIVE
         ? PROJECTION_ORTHOGRAPHIC
         : PROJECTION_PERSPECTIVE;
     printf("Projection: %s\n", projection_mode_name(app.projection_mode));
-    update_window_title(window);
 }
 
 /* Handles keyboard shortcuts for loading, projection, wireframe, and quit. */
@@ -155,10 +114,10 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         return;
     }
 
-    if (key == GLFW_KEY_ESCAPE) {
+    if (key == GLFW_KEY_Q) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     } else if (key == GLFW_KEY_L) {
-        load_model_with_dialog(window);
+        load_model(window);
     } else if (key == GLFW_KEY_P) {
         toggle_projection(window);
     } else if (key == GLFW_KEY_W) {
@@ -215,26 +174,21 @@ static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
     }
 }
 
-/* Prints startup instructions and controls to the terminal. */
-static void print_help(void)
-{
-    puts(APP_TITLE);
-    printf("Run this app from the main project folder that contains Makefile, main.c, and %s/.\n", MODEL_DIR);
-    puts("Controls:");
-    printf("  L       Load an OBJ model from %s/\n", MODEL_DIR);
-    puts("  Drag    Orbit camera");
-    puts("  Scroll  Zoom");
-    puts("  P       Toggle perspective/orthographic projection");
-    puts("  W       Toggle wireframe");
-    puts("  Esc     Quit");
-}
-
 /* Initializes the app, loads a model, and runs the render loop. */
 int main(int argc, char **argv)
 {
     glfwSetErrorCallback(glfw_error_callback);
 
-    print_help();
+    puts("3D Model Viewer");
+    printf("Run this app from the main project folder\n");
+    puts("Controls:");
+    printf("  L     Load an OBJ model");
+    puts("  Drag    Orbit camera");
+    puts("  Scroll  Zoom");
+    puts("  P       Toggle perspective/orthographic projection");
+    puts("  W       Toggle wireframe");
+    puts("  Q       Quit");
+    
     model_init(&app.model);
     app.projection_mode = PROJECTION_PERSPECTIVE;
     app.yaw = -35.0f;
@@ -246,7 +200,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    GLFWwindow *window = glfwCreateWindow(1000, 700, APP_TITLE, NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1000, 700, "3D Model Viewer", NULL, NULL);
     if (!window) {
         fprintf(stderr, "Failed to create GLFW window. Your system may not support the requested OpenGL context.\n");
         glfwTerminate();
@@ -275,23 +229,18 @@ int main(int argc, char **argv)
         const char *filename = slash ? slash + 1 : argv[1];
         snprintf(model_path, sizeof(model_path), "%s%s", MODEL_DIR_PREFIX, filename);
 
-        if (!has_obj_extension(model_path)) {
+        const char *extension = strrchr(model_path, '.');
+        if (!extension || strcasecmp(extension, ".obj") != 0) {
             fprintf(stderr, "Invalid file type: %s\nOnly .obj files can be loaded.\n", model_path);
         } else if (!load_obj_model(model_path, &app.model)) {
             fprintf(stderr, "Failed to load requested model: %s\n", model_path);
         }
     } else {
-        char model_path[PATH_BUFFER_SIZE];
-        if (find_first_model_file(model_path, sizeof(model_path)) &&
-            !load_obj_model(model_path, &app.model)) {
-            fprintf(stderr, "Found a model file but could not load it: %s\n", model_path);
-            fprintf(stderr, "Try another .obj file from the %s/ folder.\n", MODEL_DIR);
-        } else if (!app.model.source_path[0]) {
-            printf("No .obj files found in %s/.\n", MODEL_DIR);
-            printf("Make sure you ran make run from the main project folder, then add an .obj file to %s/.\n", MODEL_DIR);
-        }
+        fprintf(
+            stderr,
+            "No model file was provided.\n"
+            "press L to choose an OBJ file\n");
     }
-    update_window_title(window);
 
     while (!glfwWindowShouldClose(window)) {
         int width = 0;

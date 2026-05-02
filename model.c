@@ -248,5 +248,6 @@ int load_obj_model(const char *path, Model *out_model)
     *out_model = loaded;
 
     printf("Loaded %zu triangles from %s\n", out_model->count / 3, out_model->source_path);
+    printf("\n");
     return 1;
 }

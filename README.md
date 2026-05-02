@@ -23,7 +23,7 @@ Run these commands from the main project folder, the same folder that contains `
 make run
 ```
 
-On startup, the app loads the first `.obj` file it finds in `models/`. If that folder is empty, add an `.obj` file there and use `L` inside the app to choose it.
+`make run` opens the viewer without a model. Press `L` inside the app to choose an `.obj` file from `models/`.
 
 To open a specific OBJ file at launch:
 
@@ -44,7 +44,6 @@ make run-file MODEL=pyramid.obj
 - Scroll: zoom
 - `P`: toggle perspective/orthographic projection
 - `W`: toggle wireframe
-- `R`: reset camera
 - `Esc`: quit
 
 ## VS Code
