@@ -16,6 +16,7 @@ struct FaceVertex {
     int n = -1;
 };
 
+// Parses one OBJ face token, such as "3", "3/2", or "3/2/1".
 static FaceVertex parseFaceVertex(const std::string& token) {
     FaceVertex fv;
     std::size_t slash1 = token.find('/');
@@ -36,7 +37,8 @@ static FaceVertex parseFaceVertex(const std::string& token) {
     return fv;
 }
 
-bool loadOBJ(const std::string& path, MeshData& out) {
+// Loads positions/faces from an OBJ file and builds flat and smooth vertex data.
+bool loadOBJ(const std::string& path, MeshData& out, bool normalize) {
     std::ifstream file(path);
     if (!file.is_open()) {
         std::cerr << "[OBJLoader] Cannot open: " << path << "\n";
@@ -85,18 +87,19 @@ bool loadOBJ(const std::string& path, MeshData& out) {
         return false;
     }
 
-    // center mesh
-    glm::vec3 bbMin(FLT_MAX), bbMax(-FLT_MAX);
-    for (const auto& p : positions) {
-        bbMin = glm::min(bbMin, p);
-        bbMax = glm::max(bbMax, p);
-    }
-    glm::vec3 center = (bbMin + bbMax) * 0.5f;
-    float maxExtent = std::max({ bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z });
-    float invScale = (maxExtent > 1e-6f) ? (2.0f / maxExtent) : 1.0f;
+    if (normalize) {
+        glm::vec3 bbMin(FLT_MAX), bbMax(-FLT_MAX);
+        for (const auto& p : positions) {
+            bbMin = glm::min(bbMin, p);
+            bbMax = glm::max(bbMax, p);
+        }
+        glm::vec3 center = (bbMin + bbMax) * 0.5f;
+        float maxExtent = std::max({ bbMax.x - bbMin.x, bbMax.y - bbMin.y, bbMax.z - bbMin.z });
+        float invScale = (maxExtent > 1e-6f) ? (2.0f / maxExtent) : 1.0f;
 
-    for (auto& p : positions)
-        p = (p - center) * invScale;
+        for (auto& p : positions)
+            p = (p - center) * invScale;
+    }
 
     // build flat
     out.flatVertices.reserve(triangles.size() * 3);

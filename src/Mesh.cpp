@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include <cstddef>
 
+// Creates the OpenGL vertex array and buffer objects used by this mesh.
 Mesh::Mesh() {
     glGenVertexArrays(1, &flatVAO_);
     glGenBuffers(1, &flatVBO_);
@@ -9,6 +10,7 @@ Mesh::Mesh() {
     glGenBuffers(1, &smthEBO_);
 }
 
+// Releases the OpenGL objects owned by this mesh.
 Mesh::~Mesh() {
     glDeleteVertexArrays(1, &flatVAO_);
     glDeleteBuffers(1, &flatVBO_);
@@ -17,6 +19,7 @@ Mesh::~Mesh() {
     glDeleteBuffers(1, &smthEBO_);
 }
 
+// Uploads duplicated per-face vertices for flat shading.
 void Mesh::uploadFlat(const std::vector<Vertex>& vertices) {
     flatVertexCount_ = static_cast<int>(vertices.size());
 
@@ -37,6 +40,7 @@ void Mesh::uploadFlat(const std::vector<Vertex>& vertices) {
     glBindVertexArray(0);
 }
 
+// Uploads shared vertices and indices for smooth shading.
 void Mesh::uploadSmooth(const std::vector<Vertex>& vertices,
                         const std::vector<unsigned int>& indices) {
     smthIndexCount_ = static_cast<int>(indices.size());
@@ -61,24 +65,28 @@ void Mesh::uploadSmooth(const std::vector<Vertex>& vertices,
     glBindVertexArray(0);
 }
 
+// Draws the flat-shaded vertex buffer without indices.
 void Mesh::drawFlat() const {
     glBindVertexArray(flatVAO_);
     glDrawArrays(GL_TRIANGLES, 0, flatVertexCount_);
     glBindVertexArray(0);
 }
 
+// Draws the smooth-shaded indexed vertex buffer.
 void Mesh::drawSmooth() const {
     glBindVertexArray(smthVAO_);
     glDrawElements(GL_TRIANGLES, smthIndexCount_, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 }
 
+// Draws the flat mesh as lines, then restores filled polygon mode.
 void Mesh::drawFlatWireframe() const {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawFlat();
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+// Draws the smooth mesh as lines, then restores filled polygon mode.
 void Mesh::drawSmoothWireframe() const {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     drawSmooth();

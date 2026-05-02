@@ -1,16 +1,20 @@
 HOW TO RUN
 ----------
 
-1. Open Terminal and go to the build folder:
+1. Open Terminal and go to the project folder:
 
-   cd "/Users/mazinomar/Documents/Spring 2026/Computer Graphics/FinalProj/build"
+   cd path/to/3d-model-viewer-1
 
 2. Build and run:
 
-   make && ./ModelViewer ../models/teapot.obj
+   cmake --build build
+   ./build/ModelViewer models/teapot.obj
 
    To load a different model:
-   ./ModelViewer ../models/yourmodel.obj
+   ./build/ModelViewer models/yourmodel.obj
+
+   To load every OBJ file in a folder at the same time:
+   ./build/ModelViewer models
 
    If no model is given it defaults to models/cube.obj
 

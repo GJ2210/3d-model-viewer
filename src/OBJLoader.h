@@ -11,4 +11,5 @@ struct MeshData {
     std::vector<unsigned int> smoothIndices;
 };
 
-bool loadOBJ(const std::string& path, MeshData& out);
+// Loads a Wavefront OBJ into flat and smooth mesh buffers.
+bool loadOBJ(const std::string& path, MeshData& out, bool normalize = true);

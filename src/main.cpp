@@ -3,9 +3,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "Shader.h"
 #include "Camera.h"
@@ -13,6 +18,23 @@
 #include "OBJLoader.h"
 
 enum class ShadingMode { Flat, Gouraud, Phong };
+
+struct LoadedModel {
+    std::string path;
+    std::unique_ptr<Mesh> mesh;
+    glm::mat4 transform = glm::mat4(1.0f);
+};
+
+struct PendingModel {
+    std::string path;
+    MeshData meshData;
+};
+
+struct Bounds {
+    glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest());
+    bool valid = false;
+};
 
 struct AppState {
     Camera camera;
@@ -36,12 +58,14 @@ struct AppState {
 // global app
 static AppState* g_app = nullptr;
 
+// Updates the OpenGL viewport and stored framebuffer size after window resizing.
 static void onFramebufferResize(GLFWwindow* /*w*/, int w, int h) {
     glViewport(0, 0, w, h);
     g_app->fbWidth  = w;
     g_app->fbHeight = h;
 }
 
+// Tracks mouse button state so dragging can orbit or pan the camera.
 static void onMouseButton(GLFWwindow* /*w*/, int button, int action, int /*mods*/) {
     if (button == GLFW_MOUSE_BUTTON_LEFT)
         g_app->leftDown = (action == GLFW_PRESS);
@@ -49,6 +73,7 @@ static void onMouseButton(GLFWwindow* /*w*/, int button, int action, int /*mods*
         g_app->rightDown = (action == GLFW_PRESS);
 }
 
+// Converts mouse movement into camera orbiting or panning while a button is held.
 static void onCursorMove(GLFWwindow* /*w*/, double xpos, double ypos) {
     double dx = xpos - g_app->lastX;
     double dy = ypos - g_app->lastY;
@@ -62,10 +87,12 @@ static void onCursorMove(GLFWwindow* /*w*/, double xpos, double ypos) {
         g_app->camera.pan(static_cast<float>(dx), static_cast<float>(dy));
 }
 
+// Uses scroll wheel movement to zoom the camera toward or away from the target.
 static void onScroll(GLFWwindow* /*w*/, double /*xoff*/, double yoff) {
     g_app->camera.zoom(static_cast<float>(yoff));
 }
 
+// Handles keyboard shortcuts for shading, projection, wireframe, light, and reset.
 static void onKey(GLFWwindow* window, int key, int /*scan*/, int action, int /*mods*/) {
     if (action != GLFW_PRESS && action != GLFW_REPEAT) return;
 
@@ -100,6 +127,7 @@ static void onKey(GLFWwindow* window, int key, int /*scan*/, int action, int /*m
     }
 }
 
+// Refreshes the window title with the current render mode and shortcut summary.
 static void updateWindowTitle(GLFWwindow* window, const AppState& app) {
     const char* shadeName = (app.shadingMode == ShadingMode::Flat)    ? "Flat"
                           : (app.shadingMode == ShadingMode::Gouraud) ? "Gouraud"
@@ -116,6 +144,7 @@ static void updateWindowTitle(GLFWwindow* window, const AppState& app) {
     glfwSetWindowTitle(window, title);
 }
 
+// Sends shared transform, camera, material, and light uniforms to a shader.
 static void uploadLightUniforms(Shader& shader, const AppState& app,
                                 const glm::mat4& model,
                                 const glm::mat4& view,
@@ -133,11 +162,76 @@ static void uploadLightUniforms(Shader& shader, const AppState& app,
     shader.setVec3("viewPos",      app.camera.getPosition());
 }
 
-static void printInstructions(const std::string& objPath) {
+// Returns a lowercase copy of text for case-insensitive file extension checks.
+static std::string lowercase(std::string text) {
+    std::transform(text.begin(), text.end(), text.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+// Collects one OBJ file path or all OBJ file paths in a directory.
+static std::vector<std::string> collectObjPaths(const std::string& inputPath) {
+    namespace fs = std::filesystem;
+
+    std::vector<std::string> paths;
+    fs::path path(inputPath);
+
+    if (fs::is_directory(path)) {
+        for (const auto& entry : fs::directory_iterator(path)) {
+            if (!entry.is_regular_file()) continue;
+
+            std::string extension = lowercase(entry.path().extension().string());
+            if (extension == ".obj")
+                paths.push_back(entry.path().string());
+        }
+        std::sort(paths.begin(), paths.end());
+    } else {
+        paths.push_back(inputPath);
+    }
+
+    return paths;
+}
+
+// Expands a bounding box so it includes one more point.
+static void includePoint(Bounds& bounds, const glm::vec3& point) {
+    bounds.min = glm::min(bounds.min, point);
+    bounds.max = glm::max(bounds.max, point);
+    bounds.valid = true;
+}
+
+// Adds all vertices from a parsed mesh to the scene bounds.
+static void includeMeshData(Bounds& bounds, const MeshData& meshData) {
+    for (const auto& vertex : meshData.smoothVertices)
+        includePoint(bounds, vertex.position);
+
+    if (meshData.smoothVertices.empty()) {
+        for (const auto& vertex : meshData.flatVertices)
+            includePoint(bounds, vertex.position);
+    }
+}
+
+// Builds a transform that centers and scales the whole loaded scene into view.
+static glm::mat4 makeSceneTransform(const Bounds& bounds) {
+    if (!bounds.valid)
+        return glm::mat4(1.0f);
+
+    glm::vec3 center = (bounds.min + bounds.max) * 0.5f;
+    glm::vec3 size = bounds.max - bounds.min;
+    float maxExtent = std::max({ size.x, size.y, size.z });
+    float scale = (maxExtent > 1e-6f) ? (2.0f / maxExtent) : 1.0f;
+
+    return glm::scale(glm::mat4(1.0f), glm::vec3(scale))
+         * glm::translate(glm::mat4(1.0f), -center);
+}
+
+// Prints startup controls and the model input summary to the terminal.
+static void printInstructions(const std::string& inputPath, std::size_t modelCount) {
     std::cout
         << "Model Viewer\n"
         << "============\n"
-        << "Loaded model: " << objPath << "\n\n"
+        << "Input: " << inputPath << "\n"
+        << "Loaded OBJ files: " << modelCount << "\n\n"
+        << "Folder inputs preserve OBJ positions and scale the whole scene together.\n\n"
         << "Mouse:\n"
         << "  Left click + drag       Orbit camera around model\n"
         << "  Right click + drag      Pan camera\n"
@@ -154,9 +248,26 @@ static void printInstructions(const std::string& objPath) {
         << "  ESC                     Quit\n\n";
 }
 
+// Program entry point: loads OBJ input, initializes OpenGL, and runs the render loop.
 int main(int argc, char* argv[]) {
-    std::string objPath = (argc >= 2) ? argv[1] : "models/cube.obj";
-    printInstructions(objPath);
+    std::string inputPath = (argc >= 2) ? argv[1] : "models/cube.obj";
+    std::vector<std::string> objPaths;
+
+    try {
+        objPaths = collectObjPaths(inputPath);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to read model path: " << inputPath << "\n"
+                  << e.what() << "\n";
+        return 1;
+    }
+
+    if (objPaths.empty()) {
+        std::cerr << "No .obj files found in: " << inputPath << "\n"
+                  << "Usage: ModelViewer [path/to/model.obj | path/to/folder]\n";
+        return 1;
+    }
+
+    printInstructions(inputPath, objPaths.size());
 
     if (!glfwInit()) {
         std::cerr << "Failed to initialise GLFW\n";
@@ -221,18 +332,35 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // load model
-    MeshData meshData;
-    if (!loadOBJ(objPath, meshData)) {
-        std::cerr << "Failed to load model: " << objPath << "\n"
-                  << "Usage: ModelViewer [path/to/model.obj]\n";
-        glfwTerminate();
-        return 1;
+    // load models
+    std::vector<PendingModel> pendingModels;
+    pendingModels.reserve(objPaths.size());
+    Bounds sceneBounds;
+
+    for (const auto& objPath : objPaths) {
+        MeshData meshData;
+        if (!loadOBJ(objPath, meshData, false)) {
+            std::cerr << "Failed to load model: " << objPath << "\n"
+                      << "Usage: ModelViewer [path/to/model.obj | path/to/folder]\n";
+            glfwTerminate();
+            return 1;
+        }
+
+        includeMeshData(sceneBounds, meshData);
+        pendingModels.push_back({ objPath, std::move(meshData) });
     }
 
-    Mesh mesh;
-    mesh.uploadFlat(meshData.flatVertices);
-    mesh.uploadSmooth(meshData.smoothVertices, meshData.smoothIndices);
+    std::vector<LoadedModel> models;
+    models.reserve(pendingModels.size());
+    glm::mat4 sceneTransform = makeSceneTransform(sceneBounds);
+
+    for (auto& pendingModel : pendingModels) {
+        auto mesh = std::make_unique<Mesh>();
+        mesh->uploadFlat(pendingModel.meshData.flatVertices);
+        mesh->uploadSmooth(pendingModel.meshData.smoothVertices, pendingModel.meshData.smoothIndices);
+
+        models.push_back({ pendingModel.path, std::move(mesh), sceneTransform });
+    }
 
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -246,7 +374,6 @@ int main(int argc, char* argv[]) {
             ? static_cast<float>(app.fbWidth) / static_cast<float>(app.fbHeight)
             : 1.0f;
 
-        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view  = app.camera.getView();
         glm::mat4 proj  = app.camera.getProjection(aspect);
 
@@ -256,30 +383,33 @@ int main(int argc, char* argv[]) {
             case ShadingMode::Gouraud: activeShader = gouraudShader.get(); break;
             case ShadingMode::Phong:   activeShader = phongShader.get();   break;
         }
-        uploadLightUniforms(*activeShader, app, model, view, proj);
 
-        if (app.shadingMode == ShadingMode::Flat)
-            mesh.drawFlat();
-        else
-            mesh.drawSmooth();
-
-        // wireframe overlay
-        if (app.wireframe) {
-            wireShader->use();
-            wireShader->setMat4("model",      model);
-            wireShader->setMat4("view",       view);
-            wireShader->setMat4("projection", proj);
-            wireShader->setVec3("wireColor",  glm::vec3(1.0f, 1.0f, 1.0f));
-
-            glEnable(GL_POLYGON_OFFSET_LINE);
-            glPolygonOffset(-1.0f, -1.0f);
+        for (const auto& model : models) {
+            uploadLightUniforms(*activeShader, app, model.transform, view, proj);
 
             if (app.shadingMode == ShadingMode::Flat)
-                mesh.drawFlatWireframe();
+                model.mesh->drawFlat();
             else
-                mesh.drawSmoothWireframe();
+                model.mesh->drawSmooth();
 
-            glDisable(GL_POLYGON_OFFSET_LINE);
+            // wireframe overlay
+            if (app.wireframe) {
+                wireShader->use();
+                wireShader->setMat4("model",      model.transform);
+                wireShader->setMat4("view",       view);
+                wireShader->setMat4("projection", proj);
+                wireShader->setVec3("wireColor",  glm::vec3(1.0f, 1.0f, 1.0f));
+
+                glEnable(GL_POLYGON_OFFSET_LINE);
+                glPolygonOffset(-1.0f, -1.0f);
+
+                if (app.shadingMode == ShadingMode::Flat)
+                    model.mesh->drawFlatWireframe();
+                else
+                    model.mesh->drawSmoothWireframe();
+
+                glDisable(GL_POLYGON_OFFSET_LINE);
+            }
         }
 
         updateWindowTitle(window, app);
