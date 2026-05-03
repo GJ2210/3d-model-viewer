@@ -25,16 +25,19 @@ Mouse:
   Scroll wheel           Zoom in / out
 
 Shading:
+
   1                      Flat shading
   2                      Gouraud shading
   3                      Phong shading (default)
 
 Other:
+
   W                      Toggle wireframe overlay on/off
   P                      Switch between Perspective and Orthographic projection
   R                      Reset camera to default position
 
 Light:
+
   Arrow keys             Move light left / right / forward / back
   = (equals)             Move light up
   - (minus)              Move light down
