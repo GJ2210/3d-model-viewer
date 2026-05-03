@@ -3,14 +3,15 @@ HOW TO RUN
 
 1. Open Terminal and go to the build folder:
 
-   cd "/Users/mazinomar/Documents/Spring 2026/Computer Graphics/FinalProj/build"
+   cd build
 
 2. Build and run:
-
+   
+   cmake ../
    make && ./ModelViewer ../models/teapot.obj
 
-   To load a different model:
-   ./ModelViewer ../models/yourmodel.obj
+   To load a layout:
+   ./ModelViewer ../models/cornellbox
 
    If no model is given it defaults to models/cube.obj
 
